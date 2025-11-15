@@ -4,6 +4,8 @@ export interface TrainingSession {
   time: string; // HH:mm format
   description: string;
   duration: number; // in minutes
+  minTarget?: number; // Optional custom min target for this session
+  maxTarget?: number; // Optional custom max target for this session
 }
 
 export interface TrainingTargets {

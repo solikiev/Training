@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { TrainingSession } from '../types';
-import { generateId } from '../lib/storage';
+import { generateId, getTrainingTargets } from '../lib/storage';
 
 interface TrainingFormProps {
   selectedDate: Date;
@@ -17,6 +17,10 @@ export default function TrainingForm({ selectedDate, editingSession, onSave, onC
   const [duration, setDuration] = useState('');
   const [time, setTime] = useState('');
   const [date, setDate] = useState('');
+  const [minTarget, setMinTarget] = useState('');
+  const [maxTarget, setMaxTarget] = useState('');
+  
+  const globalTargets = getTrainingTargets();
   
   useEffect(() => {
     if (editingSession) {
@@ -25,11 +29,15 @@ export default function TrainingForm({ selectedDate, editingSession, onSave, onC
       setDuration(editingSession.duration.toString());
       setTime(editingSession.time);
       setDate(editingSession.date.split('T')[0]);
+      setMinTarget(editingSession.minTarget?.toString() || '');
+      setMaxTarget(editingSession.maxTarget?.toString() || '');
     } else {
       setDescription('');
       setDuration('');
       setTime(format(new Date(), 'HH:mm'));
       setDate(format(selectedDate, 'yyyy-MM-dd'));
+      setMinTarget('');
+      setMaxTarget('');
     }
   }, [editingSession, selectedDate]);
   
@@ -47,12 +55,32 @@ export default function TrainingForm({ selectedDate, editingSession, onSave, onC
       return;
     }
     
+    // Parse optional target fields
+    const minTargetNum = minTarget ? parseInt(minTarget) : undefined;
+    const maxTargetNum = maxTarget ? parseInt(maxTarget) : undefined;
+    
+    // Validate targets if provided
+    if (minTarget && (isNaN(minTargetNum!) || minTargetNum! <= 0)) {
+      alert('Please enter a valid minimum target');
+      return;
+    }
+    if (maxTarget && (isNaN(maxTargetNum!) || maxTargetNum! <= 0)) {
+      alert('Please enter a valid maximum target');
+      return;
+    }
+    if (minTargetNum && maxTargetNum && minTargetNum > maxTargetNum) {
+      alert('Minimum target cannot be greater than maximum target');
+      return;
+    }
+    
     const session: TrainingSession = {
       id: editingSession?.id || generateId(),
       date: `${date}T${time}`,
       time,
       description,
       duration: durationNum,
+      minTarget: minTargetNum,
+      maxTarget: maxTargetNum,
     };
     
     onSave(session);
@@ -61,6 +89,8 @@ export default function TrainingForm({ selectedDate, editingSession, onSave, onC
     setDescription('');
     setDuration('');
     setTime(format(new Date(), 'HH:mm'));
+    setMinTarget('');
+    setMaxTarget('');
   };
   
   return (
@@ -127,6 +157,38 @@ export default function TrainingForm({ selectedDate, editingSession, onSave, onC
             className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             required
           />
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label htmlFor="minTarget" className="block text-sm font-medium mb-1">
+              Min Target (optional)
+            </label>
+            <input
+              type="number"
+              id="minTarget"
+              value={minTarget}
+              onChange={(e) => setMinTarget(e.target.value)}
+              placeholder={`Default: ${globalTargets.minDuration}`}
+              min="1"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
+          
+          <div>
+            <label htmlFor="maxTarget" className="block text-sm font-medium mb-1">
+              Max Target (optional)
+            </label>
+            <input
+              type="number"
+              id="maxTarget"
+              value={maxTarget}
+              onChange={(e) => setMaxTarget(e.target.value)}
+              placeholder={`Default: ${globalTargets.maxDuration}`}
+              min="1"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            />
+          </div>
         </div>
         
         <div className="flex gap-2 pt-2">
