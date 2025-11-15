@@ -2,6 +2,7 @@
 
 import { format } from 'date-fns';
 import { TrainingSession } from '../types';
+import { getTrainingTargets } from '../lib/storage';
 
 interface TrainingHistoryProps {
   sessions: TrainingSession[];
@@ -10,6 +11,21 @@ interface TrainingHistoryProps {
 }
 
 export default function TrainingHistory({ sessions, onEdit, onDelete }: TrainingHistoryProps) {
+  const globalTargets = getTrainingTargets();
+  
+  // Helper function to get session status
+  const getSessionStatus = (session: TrainingSession) => {
+    const minTargetValue = session.minTarget ?? globalTargets.minDuration;
+    const maxTargetValue = session.maxTarget ?? globalTargets.maxDuration;
+    
+    if (session.duration < minTargetValue) {
+      return { color: 'bg-yellow-100 text-yellow-800', label: 'Below Target' };
+    } else if (session.duration > maxTargetValue) {
+      return { color: 'bg-red-100 text-red-800', label: 'Above Target' };
+    } else {
+      return { color: 'bg-green-100 text-green-800', label: 'On Target' };
+    }
+  };
   // Sort sessions by date and time (most recent first)
   const sortedSessions = [...sessions].sort((a, b) => {
     const dateA = new Date(a.date);
@@ -63,35 +79,50 @@ export default function TrainingHistory({ sessions, onEdit, onDelete }: Training
               </div>
               
               <div className="divide-y divide-gray-200">
-                {daySessions.map((session) => (
-                  <div key={session.id} className="p-4 hover:bg-gray-50 transition">
-                    <div className="flex justify-between items-start gap-4">
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="font-semibold text-blue-600">{session.time}</span>
-                          <span className="text-gray-400">•</span>
-                          <span className="font-semibold">{session.duration} min</span>
+                {daySessions.map((session) => {
+                  const status = getSessionStatus(session);
+                  const minTargetValue = session.minTarget ?? globalTargets.minDuration;
+                  const maxTargetValue = session.maxTarget ?? globalTargets.maxDuration;
+                  
+                  return (
+                    <div key={session.id} className="p-4 hover:bg-gray-50 transition">
+                      <div className="flex justify-between items-start gap-4">
+                        <div className="flex-1">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
+                            <span className="font-semibold text-blue-600">{session.time}</span>
+                            <span className="text-gray-400">•</span>
+                            <span className="font-semibold">{session.duration} min</span>
+                            <span className={`text-xs px-2 py-1 rounded ${status.color}`}>
+                              {status.label}
+                            </span>
+                          </div>
+                          <p className="text-gray-700 mb-1">{session.description}</p>
+                          <div className="flex items-center gap-2 text-xs text-gray-500">
+                            <span>Target: {minTargetValue}-{maxTargetValue} min</span>
+                            {(session.minTarget || session.maxTarget) && (
+                              <span className="text-blue-600 font-semibold">(Custom)</span>
+                            )}
+                          </div>
                         </div>
-                        <p className="text-gray-700">{session.description}</p>
-                      </div>
-                      
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => onEdit(session)}
-                          className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition"
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => handleDelete(session.id)}
-                          className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition"
-                        >
-                          Delete
-                        </button>
+                        
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => onEdit(session)}
+                            className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition"
+                          >
+                            Edit
+                          </button>
+                          <button
+                            onClick={() => handleDelete(session.id)}
+                            className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           );

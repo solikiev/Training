@@ -30,16 +30,33 @@ export default function Calendar({ sessions, targets, selectedDate, onDateSelect
     const dateStr = format(date, 'yyyy-MM-dd');
     const daily = dailyTrainings.get(dateStr);
     
-    if (!daily || daily.totalDuration === 0) {
+    // Rest day - no color
+    if (!daily || daily.sessions.length === 0) {
       return 'bg-white hover:bg-gray-100';
     }
     
-    if (daily.totalDuration >= targets.minDuration && daily.totalDuration <= targets.maxDuration) {
-      return 'bg-green-200 hover:bg-green-300';
-    } else if (daily.totalDuration < targets.minDuration) {
+    // Evaluate each session individually
+    let hasRed = false;
+    let hasYellow = false;
+    
+    daily.sessions.forEach(session => {
+      const minTargetValue = session.minTarget ?? targets.minDuration;
+      const maxTargetValue = session.maxTarget ?? targets.maxDuration;
+      
+      if (session.duration < minTargetValue) {
+        hasYellow = true;
+      } else if (session.duration > maxTargetValue) {
+        hasRed = true;
+      }
+    });
+    
+    // Return worst status
+    if (hasRed) {
+      return 'bg-red-200 hover:bg-red-300';
+    } else if (hasYellow) {
       return 'bg-yellow-200 hover:bg-yellow-300';
     } else {
-      return 'bg-red-200 hover:bg-red-300';
+      return 'bg-green-200 hover:bg-green-300';
     }
   };
   
